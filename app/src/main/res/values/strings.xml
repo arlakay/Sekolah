@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">SekolahJogja</string>
+    <string name="action_settings">Settings</string>
+    <string name="cari">Pencarian</string>
+    <string name="sekolah">Sekolah</string>
+    <string name="peta">Posisi Kita</string>
+    <string name="tentang">Tentang</string>
+    <string name="keluar">Keluar</string>
+    <string name="dasar">SD</string>
+    <string name="pertama">SMP</string>
+    <string name="atas">SMA</string>
+    <string name="tinggi">Universitas</string>
+    <string name="title_activity_maps">Map</string>
+
+</resources>

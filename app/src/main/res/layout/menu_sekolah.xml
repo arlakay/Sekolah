@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/menu_sekolah"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:layout_weight="1"
+    android:orientation="vertical"
+    android:background="@drawable/back" >
+
+    <Button
+        android:id="@+id/btn_sd"
+        style="@style/DashboardButton"
+        android:layout_above="@+id/btn_sma"
+        android:layout_alignLeft="@+id/btn_sma"
+        android:layout_marginBottom="50dp"
+        android:drawableTop="@drawable/sd1"
+        android:text="@string/dasar" />
+
+    <Button
+        android:id="@+id/btn_smp"
+        style="@style/DashboardButton"
+        android:layout_alignBaseline="@+id/btn_sd"
+        android:layout_alignBottom="@+id/btn_sd"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="41dp"
+        android:drawableTop="@drawable/smp1"
+        android:text="@string/pertama" />
+
+    <Button
+        android:id="@+id/btn_sma"
+        style="@style/DashboardButton"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
+        android:layout_marginBottom="115dp"
+        android:layout_marginLeft="32dp"
+        android:drawableTop="@drawable/sma1"
+        android:text="@string/atas" />
+
+    <Button
+        android:id="@+id/btn_univ"
+        style="@style/DashboardButton"
+        android:layout_alignBaseline="@+id/btn_sma"
+        android:layout_alignBottom="@+id/btn_sma"
+        android:layout_alignLeft="@+id/btn_smp"
+        android:drawableTop="@drawable/univ1"
+        android:text="@string/tinggi" />
+
+</RelativeLayout>
