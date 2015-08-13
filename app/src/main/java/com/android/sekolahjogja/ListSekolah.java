@@ -1,147 +1,172 @@
 package com.android.sekolahjogja;
 
-import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Intent;
-import android.net.ParseException;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.StrictMode;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.DefaultHttpClient;
+import com.android.sekolahjogja.app.MyApplication;
+import com.android.sekolahjogja.helper.ListSekolahAdapter;
+import com.android.sekolahjogja.helper.Sekolah;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonArrayRequest;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 
 
-public class ListSekolah extends Activity {
+public class ListSekolah extends Activity implements SwipeRefreshLayout.OnRefreshListener {
 
-        private Intent i;
+    private String TAG = ListSekolah.class.getSimpleName();
+    private String URL_TOP_250 = "http://herisekolah.esy.es/";
+    private SwipeRefreshLayout swipeRefreshLayout;
+    private ListSekolahAdapter adapter;
+    private List<Sekolah> sekolahList;
+    private ListView myList;
+    private String jenissekolah;
 
-        private String[] namasekolah;
-        private String[] deskripsi;
-        private Double[] lat;
-        private Double[] lng;
+    //@TargetApi(Build.VERSION_CODES.GINGERBREAD)
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.listsekolah);
 
-       @TargetApi(Build.VERSION_CODES.GINGERBREAD) @Override
-        protected void onCreate(Bundle savedInstanceState) {
-            super.onCreate(savedInstanceState);
-            setContentView(R.layout.listsekolah);
+        myList  = (ListView) findViewById(R.id.list_sekolah);
+        sekolahList = new ArrayList<>();
+        adapter = new ListSekolahAdapter(this, sekolahList);
+        myList.setAdapter(adapter);
+        myList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int pos, long l) {
+                Sekolah dataModel = (Sekolah) adapterView.getItemAtPosition(pos);
+                //Log.d(TAG, "string: " + dataModel.getTitle());
+                String namaSch = dataModel.getNama_sekolah();
+                String alamatSch = dataModel.getAlamat_sekolah();
+                String detail = dataModel.getInfo_sekolah();
+                String lat = String.valueOf(dataModel.getLati());
+                String lng = String.valueOf(dataModel.getLongi());
+                String urlPicRes = dataModel.getGambar();
 
-            if (android.os.Build.VERSION.SDK_INT > 9) {
-                StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
-                StrictMode.setThreadPolicy(policy);
+                Intent intent = new Intent(ListSekolah.this, DetailSekolah.class);
+                intent.putExtra("nama",namaSch);
+                intent.putExtra("alamat",alamatSch);
+                intent.putExtra("detail",detail);
+                intent.putExtra("url",urlPicRes);
+                intent.putExtra("lat",lat);
+                intent.putExtra("lng",lng);
+                startActivity(intent);
             }
+        });
 
-            String hasil = null;
-            InputStream is = null;
-            StringBuilder sb = null;
+        swipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_refresh_layout);
+        swipeRefreshLayout.setOnRefreshListener(this);
 
-           // http post
-            try {
-                HttpClient httpclient = new DefaultHttpClient();
-                // 10.0.2.2 ip nya localhost, kalau ada domain yang online tinggal ganti aja ip nya pake domain (misal: example.com)
-                // androidOnlineJSON.php buat akses ke databasenya, ditaro di htdocs
-                String jenissekolah = getIntent().getExtras().getString("jenissekolah");
-                String url;
-                if(jenissekolah.equalsIgnoreCase("SD")){
-                    url = "datasd.php";
-                }else if (jenissekolah.equalsIgnoreCase("SMP")){
-                    url = "datasmp.php";
-                }else if (jenissekolah.equalsIgnoreCase("SMA")){
-                    url = "datasma.php";
-                }else{
-                    url = "datapt.php";
-                }
-                HttpPost httppost = new HttpPost("http://herisekolah.esy.es/"+url);
-                HttpResponse response = httpclient.execute(httppost);
-                HttpEntity entity = response.getEntity();
-                is = entity.getContent();
-            } catch (Exception e) {
-                Log.e("log_tag", "Error in http connection " + e.toString());
+        // Showing Swipe Refresh animation on activity create
+        // As animation won't start on onCreate, post runnable is used
+        swipeRefreshLayout.post(new Runnable() {
+            @Override
+            public void run() {
+                swipeRefreshLayout.setRefreshing(true);
+                fetchSekolah();
             }
-
-            // convert response to string
-            try {
-                BufferedReader reader = new BufferedReader(new InputStreamReader(is, "iso-8859-1"), 8);
-                sb = new StringBuilder();
-                sb.append(reader.readLine() + "\n");
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    sb.append(line + "\n");
-                }
-                is.close();
-                hasil = sb.toString();
-            } catch (Exception e) {
-                Log.e("log_tag", "Error converting result " + e.toString());
-            }
-
-            // parsing data
-            JSONArray jArray;
-            try {
-                jArray = new JSONArray(hasil);
-                JSONObject json_data;
-
-                namasekolah = new String [jArray.length()];
-                deskripsi = new String [jArray.length()];
-                lat = new Double[jArray.length()];
-                lng = new Double [jArray.length()];
-
-                for (int i = 0; i < jArray.length(); i++) {
-                    json_data = jArray.getJSONObject(i);
-
-                    namasekolah[i] = json_data.getString("nama_sekolah");
-                    deskripsi[i] = json_data.getString("info_sekolah");
-                    lat[i] = json_data.getDouble("latitude");
-                    lng[i] = json_data.getDouble("longitude");
-                }
-            } catch (JSONException e1) {
-                Toast.makeText(getBaseContext(), "sekolah belum ada", Toast.LENGTH_LONG).show();
-            } catch (ParseException e1) {
-                e1.printStackTrace();
-            }
-
-            i = new Intent(this, DetailSekolah.class);
-
-
-            ListView lv = (ListView) findViewById(R.id.list_sekolah);
-            lv.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, namasekolah));
-            lv.setTextFilterEnabled(true);
-            lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-
-                public void onItemClick(AdapterView<?> arg0, View arg1, int indexSelectedItem,
-                                        long arg3) {
-                    Toast.makeText(getApplicationContext(),
-                            namasekolah[indexSelectedItem] + " wasClicked",
-                            Toast.LENGTH_SHORT).show();
-
-
-                    i.putExtra("namasekolah", namasekolah[indexSelectedItem]);
-                    i.putExtra("deskripsi", deskripsi[indexSelectedItem]);
-                    i.putExtra("lat", lat[indexSelectedItem]);
-                    i.putExtra("lng", lng[indexSelectedItem]);
-                    startActivity(i);
-                }
-            });
-        }
-        @Override
-        public void onBackPressed() {
-            // TODO Auto-generated method stub
-            super.onBackPressed();
-            startActivity(new Intent(this, MenuSekolah.class));
-        }
+        });
     }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        startActivity(new Intent(this, MenuSekolah.class));
+    }
+
+    //This method is called when swipe refresh is pulled down
+    @Override
+    public void onRefresh() {
+        swipeRefreshLayout.setRefreshing(true);
+        fetchSekolah();
+    }
+
+    //Fetching movies json by making http call
+    private void fetchSekolah() {
+
+        // showing refresh animation before making http call
+        swipeRefreshLayout.setRefreshing(true);
+
+        // appending offset to url
+        jenissekolah = getIntent().getExtras().getString("jenissekolah");
+        String ext;
+        if(jenissekolah.equalsIgnoreCase("SD")){
+            ext = "datasd.php";
+        }else if (jenissekolah.equalsIgnoreCase("SMP")){
+            ext = "datasmp.php";
+        }else if (jenissekolah.equalsIgnoreCase("SMA")){
+            ext = "datasma.php";
+        }else{
+            ext = "datapt.php";
+        }
+        String url = URL_TOP_250+ext;
+
+        // Volley's json array request object
+        JsonArrayRequest req = new JsonArrayRequest(url,
+                new Response.Listener<JSONArray>() {
+                    @Override
+                    public void onResponse(JSONArray response) {
+                        Log.d(TAG, response.toString());
+
+                        if (response.length() > 0) {
+
+                            // looping through json and adding to movies list
+                            for (int i = 0; i < response.length(); i++) {
+                                try {
+                                    JSONObject movieObj = response.getJSONObject(i);
+
+                                    int id_sekolah = movieObj.getInt("id_sekolah");
+                                    int id_kategori = movieObj.getInt("id_kategori");
+                                    String nama = movieObj.getString("nama_sekolah");
+                                    String alamat = movieObj.getString("alamat_sekolah");
+                                    String deskripsi = movieObj.getString("info_sekolah");
+                                    Double lati =  movieObj.getDouble("latitude");
+                                    Double longi = movieObj.getDouble("longitude");
+                                    String urlpic = movieObj.getString("gambar");
+                                    String kategori = movieObj.getString("nama_kategori");
+
+
+                                    Sekolah m = new Sekolah(id_sekolah, id_kategori, nama, alamat, deskripsi, urlpic, kategori, lati, longi);
+
+                                    sekolahList.add(m);
+
+                                } catch (JSONException e) {
+                                    Log.e(TAG, "JSON Parsing error: " + e.getMessage());
+                                }
+                            }
+                            adapter.notifyDataSetChanged();
+                        }
+                        // stopping swipe refresh
+                        swipeRefreshLayout.setRefreshing(false);
+
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.e(TAG, "Server Error: " + error.getMessage());
+
+                //Toast.makeText(getApplicationContext(), error.getMessage(), Toast.LENGTH_LONG).show();
+                Toast.makeText(getApplicationContext(), "Error Retrieving Data\nPull Down to Refresh", Toast.LENGTH_LONG).show();
+                // stopping swipe refresh
+                swipeRefreshLayout.setRefreshing(false);
+            }
+        });
+        // Adding request to request queue
+        MyApplication.getInstance().addToRequestQueue(req);
+    }
+
+}
